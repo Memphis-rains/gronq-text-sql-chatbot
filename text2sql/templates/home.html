@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text to SQL</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-5">Text to SQL</h1>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <form id="queryForm">
+                    <div class="mb-3">
+                        <label for="schemaInput" class="form-label">Schema:</label>
+                        <textarea class="form-control" rows="10" readonly>
+                            CREATE TABLE Employees (
+                                emp_id SERIAL PRIMARY KEY,
+                                first_name VARCHAR,
+                                last_name VARCHAR,
+                                email VARCHAR,
+                                phone VARCHAR,
+                                dept_id INTEGER,
+                                hire_date DATE,
+                                salary DECIMAL,
+                                manager_id INTEGER
+                            );
+                            
+                            CREATE TABLE Departments (
+                                dept_id SERIAL PRIMARY KEY,
+                                dept_name VARCHAR,
+                                
+                            );
+                            
+                            
+                            CREATE TABLE Skills (
+                                skill_id SERIAL PRIMARY KEY,
+                                skill VARCHAR,
+                                description TEXT
+                            );
+                            
+                            CREATE TABLE EmployeeSkills (
+                                emp_id INTEGER REFERENCES Employees(emp_id),
+                                skill_id INTEGER REFERENCES Skills(skill_id),
+                                proficiency VARCHAR,
+                                PRIMARY KEY (emp_id, skill_id)
+                            );
+                            
+                            CREATE TABLE EmployeeProjects (
+                                emp_id INTEGER REFERENCES Employees(emp_id),
+                                project_id INTEGER,
+                                PRIMARY KEY (emp_id, project_id)
+                            );
+                            
+                            CREATE TABLE Projects (
+                                project_id SERIAL PRIMARY KEY,
+                                project_name VARCHAR,
+                                start_date DATE,
+                                end_date DATE
+                            );
+                            </textarea>
+
+                    </div>
+                    <div class="mb-3">
+                        <label for="promptInput" class="form-label">Prompt:</label>
+                        <input type="text" style="width:1200px;border: 3px solid black" class="form-control" id="promptInput" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Generate SQL Query</button>
+                </form>
+            </div>
+        </div>
+
+
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-6">
+                <h3>Predefined Prompts:</h3>
+                <p><em>Hover on buttons to see demo prompts</em></p>
+                <!-- Easy Prompts -->
+                <div class="row">
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('List all employees');"  >Prompt 1</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('Display all projects');"  >Prompt 4</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('Get the email and phone number of employees in department with ID 3');"  >Prompt 5</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('Find the most common skills among employees');"  >Prompt 14</button>
+                    </div>
+                </div>
+                <br>
+                <div class="row">
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('Find the names and hire dates of employees who have SQL as a skill');"  >Prompt 6</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('List the names of projects along with their start and end dates');"  >Prompt 7</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('Retrieve the names of all employees who are proficient in Python');"  >Prompt 8</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('Show the total number of employees in each department');"  >Prompt 9</button>
+                    </div>
+                </div>
+                <br>
+                <div class="row">
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('Show the names and salaries of employees who work on project with ID 5');"  >Prompt 10</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('Get the names of employees who have a proficiency level of Expert in any skill');"  >Prompt 11</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('List the names of employees who have worked on more than one project');"  >Prompt 12</button>
+                    </div>
+                    <div class="col">
+                        <button class="btn btn-secondary prompt-btn" onclick="showPrompt('Retrieve the names of employees who have not been assigned to any project');"  >Prompt 13</button>
+                    </div>
+                </div>
+                
+
+            </div>
+        </div>
+        
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-6">
+                <div id="queryContainer">
+                    <h4>SQL Query:</h4>
+                </div>
+                <div id="responseContainer">
+                    <h4>Query Output:</h4>
+                </div>
+                <div id="errorContainer">
+                    <h4>Error:</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showPrompt(promptText) {
+            document.getElementById("promptInput").value = promptText;
+        }
+    </script>
+    
+
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#queryForm').submit(function (event) {
+                event.preventDefault();
+                // Empty all divs before processing response
+                $('#queryContainer').empty();
+                $('#responseContainer').empty();
+                $('#errorContainer').empty();
+    
+                var schema = $('#schemaInput').val();
+                var prompt = $('#promptInput').val();
+                $.ajax({
+                    type: 'GET',
+                    url: 'get_sql_query',
+                    data: {
+                        'schema': schema,
+                        'prompt': prompt
+                    },
+                    success: function (response) {
+                        $('#queryContainer').html(
+                            '<div class="alert alert-success" role="alert">' + response.sql_query + '</div>');
+                        if (response.output.result) {
+                            var resultHtml = '<table class="table table-striped">';
+    
+                            // Table header
+                            resultHtml += '<thead><tr>';
+                            $.each(response.output.result[0], function(key, value) {
+                                resultHtml += '<th>' + key + '</th>';
+                            });
+                            resultHtml += '</tr></thead>';
+    
+                            // Table body
+                            resultHtml += '<tbody>';
+                            $.each(response.output.result, function(index, record) {
+                                resultHtml += '<tr>';
+                                $.each(record, function(key, value) {
+                                    resultHtml += '<td>' + value + '</td>';
+                                });
+                                resultHtml += '</tr>';
+                            });
+                            resultHtml += '</tbody></table>';
+    
+                            $('#responseContainer').html(resultHtml);
+                        }
+                        if (response.output.error) {
+                            $('#errorContainer').html(
+                                '<div class="alert alert-danger" role="alert">' +
+                                response.output.error + '</div>');
+                        }
+                    },
+                    error: function (xhr, errmsg, err) {
+                        // Handle error message properly
+                        $('#errorContainer').html(
+                            '<div class="alert alert-danger" role="alert">Error: ' + xhr
+                            .status + ' ' + xhr.statusText + '</div>');
+                    }
+                });
+            });
+        });
+    </script>
+    
+</body>
+
+</html>
